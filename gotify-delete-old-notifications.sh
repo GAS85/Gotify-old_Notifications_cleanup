@@ -27,7 +27,7 @@ curlConfiguration="-fsS -m 10 --retry 3"
 if [[ -z "$keepDays" ]]; then
 
 	echo "Keep Days is: $keepDays, nothing to do."
-    exit 0
+	exit 0
 
 fi
 
@@ -56,13 +56,13 @@ getAllNotifications () {
 
 	# Output Date with time, e.g.:
 	# 2021-10-25
-    # similar to date +"%Y-%m-%d"
+	# similar to date +"%Y-%m-%d"
 	getDates="$(echo $apiCall | jq .messages | grep -E '"date"' | awk -F'["]' '{print $4}' | awk -F'[T]' '{print $1}')"
 
 	# URL to get next is .../application/10/message?limit=100&since=6933
-    # will be "null" if nothing
+	# will be "null" if nothing
 	pagingLimit="$(echo $apiCall | jq .paging.limit)"
-    # Will be "0" if no following pages needed
+	# Will be "0" if no following pages needed
 	pagingSince="$(echo $apiCall | jq .paging.since)"
 
 }
