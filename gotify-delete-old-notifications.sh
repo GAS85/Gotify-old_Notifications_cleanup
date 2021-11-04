@@ -24,9 +24,9 @@ fi
 
 curlConfiguration="-fsS -m 10 --retry 3"
 
-if [[ -z "$keepDays" ]]; then
+if [[ -z "$keepDays" ]] || [[ "$keepDays" == 0 ]]; then
 
-	echo "Keep Days is: $keepDays, nothing to do."
+	echo "Keep Days is not set or Zero, nothing to do."
 	exit 0
 
 fi
@@ -34,13 +34,16 @@ fi
 # Get date when notifications should be deleted
 DateToDeleteNotifications="$(date --date="$keepDays day ago" '+%Y-%m-%d')"
 
+
 if [[ "$GotifyApplicationId" == "" ]]; then
 
 	GotifyURL="https://$GotifyDomain/message"
+	GotifyURLToDelete=$GotifyURL
 
 else
 
 	GotifyURL="https://$GotifyDomain/application/$GotifyApplicationId/message"
+	GotifyURLToDelete="https://$GotifyDomain/message"
 
 fi
 
@@ -69,7 +72,7 @@ getAllNotifications () {
 
 deleteNotification () {
 
-	curl $curlConfiguration -X DELETE "$GotifyURL/$toDelete" -H "X-Gotify-Key:$GotifyClientToken" >> /dev/null
+	curl $curlConfiguration -X DELETE "$GotifyURLToDelete/$toDelete" -H "X-Gotify-Key:$GotifyClientToken" >> /dev/null
 	toDelete=""
 
 }
