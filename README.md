@@ -112,11 +112,7 @@ docker run -v /your/storage/path/:/etc/gotify-delete-old-notifications.conf gton
 
 You can configure following variables:
 
-1. `GDON_USE_CRON=false` Enable container with a cron job so it will be executed on daily basis. Without it container will exit after script executed once. Example is:
-```bash
-docker run -d -e GDON_USE_CRON=true gton
-```
-In this case CLI parameters will be ignored, please use configuration in [persist configuration](#persist-configuration) file.
+1. `GDON_USE_CRON=false` Enable container with a cron job so it will be executed on daily basis. Without it container will exit after script executed once. Example is: `docker run -d -e GDON_USE_CRON=true gton`. In this case CLI parameters will be ignored, please use configuration in [persist configuration](#persist-configuration) file.
 2. `GDON_APP_ID=<value>` Set Gotify Application ID. E.g., `10` than messages only for application 10 will be deleted.
 3. `GDON_KEEP_DAYS=<value>` Set Number of days to keep messages, all messages older than this number will be deleted. Could not be zero. Default `7`.
 4. `GDON_GLOBAL=false` Work Globally for all applications, `GDON_APP_ID` will be ignored in this case.
