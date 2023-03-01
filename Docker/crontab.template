@@ -1,0 +1,5 @@
+# Enable PATH
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+# Gotify daily cleaunup
+@daily root /gotify-delete-old-notifications.sh > /proc/$(cat /var/run/crond.pid)/fd/1 2>&1
+#

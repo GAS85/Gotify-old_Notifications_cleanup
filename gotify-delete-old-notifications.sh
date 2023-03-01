@@ -43,7 +43,7 @@ while getopts ":hd:a:c:k:gsf:" option; do
 			echo "  ./gotify-delete-old-notifications.sh -g -k 365"
 			echo ""
 			echo "Options:"
-			echo "  -l <ID>         Set Gotify Application ID. E.g. '10' than messages only
+			echo "  -a <ID>         Set Gotify Application ID. E.g. '10' than messages only
                   for application 10 will be deleted."
 			echo "  -k <Number>     Set Number of days to keep messages, all messages older than
                   this number will be deleted.
