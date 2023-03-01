@@ -15,8 +15,8 @@ RUN apt-get update && \
     cron && \
     rm -rf /var/lib/apt/lists/*
     
-COPY Docker/ / \
-     gotify-delete-old-notifications.sh /
+COPY Docker/ /
+COPY gotify-delete-old-notifications.sh /
 
 RUN echo "Lets make *.sh executable" && \
     chmod +x /*.sh && \
