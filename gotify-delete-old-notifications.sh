@@ -14,8 +14,9 @@ keepDays=7
 
 CentralConfigFile="/etc/gotify-delete-old-notifications.conf"
 
-### END OF CONFIGURATION ###
+LOCKFILE=/tmp/.gotify-delete-old-notifications.lock
 
+### END OF CONFIGURATION ###
 
 if [[ -f "$CentralConfigFile" ]]; then
 
@@ -26,35 +27,35 @@ fi
 while getopts ":hd:a:c:k:gsf:" option; do
 	case $option in
 		h)	# Help
-			echo "Simple Gotify old notifications cleaner."
-			echo "By Georgiy Sitnikov."
-			echo ""
-			echo "Usage: ./gotify-delete-old-notifications.sh [options]"
-            echo ""
-			echo "Example:"
-            echo "For Application ID 10:"
-			echo "  ./gotify-delete-old-notifications.sh -a 10"
-            echo ""
-            echo "... save messages for last 7 days,
-    on custom server:"
-			echo "  ./gotify-delete-old-notifications.sh -a 10 -k 7 -d server.com/gotify"
-            echo ""
-            echo "Delete all messages older than 1 year, aka 'globally':"
-			echo "  ./gotify-delete-old-notifications.sh -g -k 365"
-			echo ""
-			echo "Options:"
-			echo "  -a <ID>         Set Gotify Application ID. E.g. '10' than messages only
-                  for application 10 will be deleted."
-			echo "  -k <Number>     Set Number of days to keep messages, all messages older than
+			echo "Simple Gotify old notifications cleaner.
+By Georgiy Sitnikov.
+
+Usage: ./gotify-delete-old-notifications.sh [options]
+
+Example:
+For Application ID 10:
+  ./gotify-delete-old-notifications.sh -a 10
+
+... save messages for last 7 days,
+    on custom server:
+  ./gotify-delete-old-notifications.sh -a 10 -k 7 -d server.com/gotify
+
+Delete all messages older than 1 year, aka 'globally':
+  ./gotify-delete-old-notifications.sh -g -k 365
+
+Options:
+  -a <ID>         Set Gotify Application ID. E.g. '10' than messages only
+                  for application 10 will be deleted.
+  -k <Number>     Set Number of days to keep messages, all messages older than
                   this number will be deleted.
-                  Could not be zero. Default 7."
-			echo "  -g              Work Globally for all applications, could not be combined with '-a'."
-			echo "  -c              Set Client Token for Gotify."
-			echo "  -d              Set Gotify Path and Port as: 'server.com:8080/gotify'."
-            echo "                  HTTPS is only supported protocol, you do not need to set it."
-			echo "  -f <path>       Custom path to config file, default '/etc/gotify-delete-old-notifications.conf'."
-			echo "  -s              Show current active configuration and exit."
-			echo "  -h              This help."
+                  Could not be zero. Default 7.
+  -g              Work Globally for all applications, could not be combined with '-a'.
+  -c              Set Client Token for Gotify.
+  -d              Set Gotify Path and Port as: 'server.com:8080/gotify'.
+                  HTTPS is only supported protocol, you do not need to set it.
+  -f <path>       Custom path to config file, default '/etc/gotify-delete-old-notifications.conf'.
+  -s              Show current active configuration and exit.
+  -h              This help."
 			exit 0
 			;;
 		d)	# set GotifyDomain
@@ -99,8 +100,18 @@ while getopts ":hd:a:c:k:gsf:" option; do
 	esac
 done
 
+# LOCKFILE is needed to aviod parallel execution
+if [ -f "$LOCKFILE" ]; then
+	echo "$(date) - Other sync instance seems running now."
+	# Remove lock file if script fails last time and did not run longer than 1 day due to lock file.
+	find "$LOCKFILE" -mtime +1 -type f -delete
+	exit 0
+fi
+
+touch $LOCKFILE
+
 # Set curl Options, like timeout and number of retries
-curlConfiguration="-fsS -m 10 --retry 3"
+curlConfiguration='-fsSL -m 10 --retry 1 -w \n%{http_code}'
 
 if [[ -z "$keepDays" ]] || [[ "$keepDays" == 0 ]]; then
 
@@ -128,17 +139,32 @@ fi
 Paging=""
 
 # Connectivity check
-connectivityCheck="$(curl -m 10 -sL -w "%{http_code}\n" "$GotifyURL?token=$GotifyClientToken" -o /dev/null)"
-[[ "$connectivityCheck" == "401" ]] && { echo "ERROR - Unauthorized. Please check Client Token."; exit 1; }
-[[ "$connectivityCheck" == "000" ]] && { echo "ERROR - Host not reacheble under https://$GotifyDomain. Please check if Server and Port are correct."; exit 1; }
+ConnectivityCheck () {
+
+	connectivityCheck=${apiCall: -3}
+
+	# This is success
+	[[ "$connectivityCheck" == "200" ]] && return
+
+	# This is an error
+	[[ "$connectivityCheck" == "400" ]] && { echo "$(date) - ERROR - Bad Request."; rm $LOCKFILE ; exit 1; }
+	[[ "$connectivityCheck" == "401" ]] && { echo "$(date) - ERROR - Unauthorized. Please check Client Token."; rm $LOCKFILE ; exit 1; }
+	[[ "$connectivityCheck" == "404" ]] && { echo "$(date) - ERROR - Not Found."; rm $LOCKFILE ; exit 1; }
+	[[ "$connectivityCheck" == "500" ]] && { echo "$(date) - ERROR - Server Error."; rm $LOCKFILE ; exit 1 ; }
+	[[ "$connectivityCheck" == "000" ]] && { echo "$(date) - ERROR - Host not reacheble. Please check if Server and Port are correct."; rm $LOCKFILE ; exit 1 ; }
+
+}
 
 getAllNotifications () {
 
 	# Collect Notifications IDs and dates pushed to Gotify
-	apiCall="$(curl $curlConfiguration "$GotifyURL?token=$GotifyClientToken$Paging" 2>/dev/null)"
+	apiCall="$(curl $curlConfiguration "$GotifyURL?token=$GotifyClientToken$Paging" 2>&1)"
+	ConnectivityCheck
+	apiCall=${apiCall::-3}
 
 	# Output Number
 	getIDs="$(echo $apiCall | jq .messages | grep '"id":' | awk '{print $2}' | sed 's/.$//')"
+	[[ "$getIDs" == "" ]] && { echo "$(date) - WARNING - No IDs were collected."; rm $LOCKFILE ; exit 0; }
 
 	# Output Date with time, e.g.:
 	# 2021-10-25
@@ -155,7 +181,8 @@ getAllNotifications () {
 
 deleteNotification () {
 
-	curl $curlConfiguration -X DELETE "$GotifyURLToDelete/$toDelete" -H "X-Gotify-Key:$GotifyClientToken" >> /dev/null
+	apiCall=$(curl $curlConfiguration -X DELETE "$GotifyURLToDelete/$toDelete" -H "X-Gotify-Key:$GotifyClientToken" 2>&1)
+	ConnectivityCheck
 	toDelete=""
 
 }
@@ -197,5 +224,7 @@ do
 	fi
 
 done
+
+rm $LOCKFILE
 
 exit 0
