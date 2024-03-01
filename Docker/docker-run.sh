@@ -85,14 +85,15 @@ if [[ ! -z $GDON_DOMAIN ]]; then
 
 fi
 
-
 # Provide all arguments to the command instead of using of Docker Variables if presented
+
+echo "$(date) - Starting GDON"
 
 if [[ "$GDON_USE_CRON" == "true" ]]; then
 
     ./gotify-delete-old-notifications.sh
 
-    echo "$(date +"[%d/%M/%Y:%H:%M:%S %z]") - Starting Cron"
+    echo "$(date) - Starting Cron"
 
     #service cron start
     cron -f -L 15 2>&1

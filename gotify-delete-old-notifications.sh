@@ -24,7 +24,7 @@ if [[ -f "$CentralConfigFile" ]]; then
 
 fi
 
-while getopts ":hd:a:c:k:gsf:" option; do
+while getopts ":hd:a:c:k:gsf:A" option; do
 	case $option in
 		h)	# Help
 			echo "Simple Gotify old notifications cleaner.
@@ -87,12 +87,15 @@ Options:
 			[[ -r "$CentralConfigFile" ]] || { echo "ERROR - Custom config file is set, but not could not be read under $CentralConfigFile."; exit 1; }
 			;;
 		s)	# Show current Active Configuration
-			echo "Gotify Path:                 $GotifyDomain"
+			echo "Gotify Path:                 https://$GotifyDomain"
 			echo "Gotify Application ID:       $GotifyApplicationId"
 			echo "Gotify Client Token:         $(echo $GotifyClientToken | cut -c -4)..."
 			echo "Days to keep messages:       $keepDays"
 			echo "Expected configuration file: $CentralConfigFile"
 			exit 0
+			;;
+		A) # Force Alpine features
+			UseAlpine=true
 			;;
 		\?)
 			break
@@ -120,8 +123,18 @@ if [[ -z "$keepDays" ]] || [[ "$keepDays" == 0 ]]; then
 
 fi
 
-# Get date when notifications should be deleted
-DateToDeleteNotifications="$(date --date="$keepDays day ago" '+%Y-%m-%d')"
+# Check if I am on Ubuntu or on Alpine. Defalut will be Ubuntu, but for Docker Alpine image used.
+if [[ "$UseAlpine" == "true" ]]; then
+
+	# Get date when notifications should be deleted for Alpine based on Seconds
+	DateToDeleteNotifications="$(date -d "@$(( $(date +%s) - $keepDays * 24 * 60 * 60 ))" -I)"
+
+else
+
+	# Get date when notifications should be deleted for Ubuntu
+	DateToDeleteNotifications="$(date --date="$keepDays day ago" '+%Y-%m-%d')"
+
+fi
 
 # Check if GotifyApplicationId set, use different links to work
 if [[ "$GotifyApplicationId" == "" ]]; then
