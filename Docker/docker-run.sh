@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "Welcome to Gotify Delete Old Notifications (GDON) container.
-Original Repository is https://git.sitnikov.ga/gas/Gotify-Old_Notifications_cleanup.
+Original Repository is https://git.sitnikov.eu/gas/Gotify-Old_Notifications_cleanup.
 Mirror under: https://github.com/GAS85/Gotify-old_Notifications_cleanup."
 
 #  -s              Show current active configuration and exit.
