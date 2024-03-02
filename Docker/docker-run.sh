@@ -85,8 +85,9 @@ if [[ ! -z $GDON_DOMAIN ]]; then
 
 fi
 
-
 # Provide all arguments to the command instead of using of Docker Variables if presented
+
+echo "$(date +"[%d/%M/%Y:%H:%M:%S %z]") - Starting GDON"
 
 if [[ "$GDON_USE_CRON" == "true" ]]; then
 

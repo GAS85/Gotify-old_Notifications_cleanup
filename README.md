@@ -41,6 +41,7 @@ Options could be:
     Expected configuration file: /etc/gotify-delete-old-notifications.conf
     ```
  - `-h` Help."
+ - `-A` Indicate that programm runned under busybox, e.g Alpine to call date in a different format.
 
 ## Run it
 
