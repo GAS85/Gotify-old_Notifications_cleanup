@@ -105,7 +105,7 @@ done
 
 # LOCKFILE is needed to aviod parallel execution
 if [ -f "$LOCKFILE" ]; then
-	echo "$(date) - Other sync instance seems running now."
+	echo "$(date +"[%d/%M/%Y:%H:%M:%S %z]") - Other sync instance seems running now."
 	# Remove lock file if script fails last time and did not run longer than 1 day due to lock file.
 	find "$LOCKFILE" -mtime +1 -type f -delete
 	exit 0
@@ -160,11 +160,11 @@ ConnectivityCheck () {
 	[[ "$connectivityCheck" == "200" ]] && return
 
 	# This is an error
-	[[ "$connectivityCheck" == "400" ]] && { echo "$(date) - ERROR - Bad Request."; rm $LOCKFILE ; exit 1; }
-	[[ "$connectivityCheck" == "401" ]] && { echo "$(date) - ERROR - Unauthorized. Please check Client Token."; rm $LOCKFILE ; exit 1; }
-	[[ "$connectivityCheck" == "404" ]] && { echo "$(date) - ERROR - Not Found."; rm $LOCKFILE ; exit 1; }
-	[[ "$connectivityCheck" == "500" ]] && { echo "$(date) - ERROR - Server Error."; rm $LOCKFILE ; exit 1 ; }
-	[[ "$connectivityCheck" == "000" ]] && { echo "$(date) - ERROR - Host not reacheble. Please check if Server and Port are correct."; rm $LOCKFILE ; exit 1 ; }
+	[[ "$connectivityCheck" == "400" ]] && { echo "$(date +"[%d/%M/%Y:%H:%M:%S %z]") - ERROR - Bad Request."; rm $LOCKFILE ; exit 1; }
+	[[ "$connectivityCheck" == "401" ]] && { echo "$(date +"[%d/%M/%Y:%H:%M:%S %z]") - ERROR - Unauthorized. Please check Client Token."; rm $LOCKFILE ; exit 1; }
+	[[ "$connectivityCheck" == "404" ]] && { echo "$(date +"[%d/%M/%Y:%H:%M:%S %z]") - ERROR - Not Found under https://$GotifyDomain."; rm $LOCKFILE ; exit 1; }
+	[[ "$connectivityCheck" == "500" ]] && { echo "$(date +"[%d/%M/%Y:%H:%M:%S %z]") - ERROR - Server Error by calling https://$GotifyDomain"; rm $LOCKFILE ; exit 1 ; }
+	[[ "$connectivityCheck" == "000" ]] && { echo "$(date +"[%d/%M/%Y:%H:%M:%S %z]") - ERROR - Host not reacheble. Please check if Server and Port are correct. Current config is https://$GotifyDomain"; rm $LOCKFILE ; exit 1 ; }
 
 }
 
@@ -177,7 +177,7 @@ getAllNotifications () {
 
 	# Output Number
 	getIDs="$(echo $apiCall | jq .messages | grep '"id":' | awk '{print $2}' | sed 's/.$//')"
-	[[ "$getIDs" == "" ]] && { echo "$(date) - WARNING - No IDs were collected."; rm $LOCKFILE ; exit 0; }
+	[[ "$getIDs" == "" ]] && { echo "$(date +"[%d/%M/%Y:%H:%M:%S %z]") - WARNING - No IDs were collected."; rm $LOCKFILE ; exit 0; }
 
 	# Output Date with time, e.g.:
 	# 2021-10-25
@@ -200,25 +200,36 @@ deleteNotification () {
 
 }
 
+allMessagescount=0
+
 findExpiredNotifications () {
 
-	COUNT=1
+	count=1
 
 	while read notificationDate; do
 
 		if [[ "$DateToDeleteNotifications" > "$notificationDate" ]]; then
 
 			# Get Notification ID per following Number corresponding Date Following Number
-			toDelete="$(echo $getIDs | awk '{ print $'$COUNT' }')"
+			toDelete="$(echo $getIDs | awk '{ print $'$count' }')"
 			deleteNotification
+			((allMessagescount++));
+
+			if (( $allMessagescount % 25 == 0 )); then
+
+				echo "$(date +"[%d/%M/%Y:%H:%M:%S %z]") - INFO - $allMessagescount Messages were removed. Still working..."
+
+			fi
 
 		fi
 
-		((COUNT++));
+		((count++));
 
 	done <<< "$getDates" # Read from variable
 
 }
+
+echo "$(date +"[%d/%M/%Y:%H:%M:%S %z]") - INFO - Starting Gotify Delete Old Notifications, will remove notifications before $DateToDeleteNotifications."
 
 while :
 do
@@ -237,6 +248,8 @@ do
 	fi
 
 done
+
+echo "$(date +"[%d/%M/%Y:%H:%M:%S %z]") - INFO - Finished. $allMessagescount Messages were removed."
 
 rm $LOCKFILE
 
